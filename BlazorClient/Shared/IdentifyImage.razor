@@ -1,0 +1,64 @@
+﻿@using BlazorClient.Data; 
+@inject ImageClassificationService ClassificationService
+
+    <div class="card mb-2">
+        <div class="card-header">
+            @Image.Name
+        </div>
+
+        @if (Image.Base64Image != null)
+        {
+            <img src="data:image/png;base64, @Image.Base64Image" class="card-img-top" alt="@Image.Name" />
+        }
+
+        <div class="card-body">
+            We will render here the classification result
+        </div>
+        <p class="card-text text-center my-2">
+            @if (Image.ClassificationResult != null)
+            {
+                @:Classified as <strong>@Image.ClassificationResult.Label</strong>
+                @:with <strong>@Image.ClassificationResult.Probability</strong> probability
+            }
+            else
+            {
+                <em>Processing...</em>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar"
+                         style="width: @Image.UploadedPercentage%"
+                         aria-valuenow="@Image.UploadedPercentage"
+                         aria-valuemin="0"
+                         aria-valuemax="100"></div>
+                </div>
+            }
+        </p>
+
+        <p class="card-text">
+            <button class="btn btn-secondary" @onclick="TriggerOnClear">Clear</button>
+        </p>
+    </div>
+
+@code {
+
+   
+    [Parameter]
+    public SelectedImage Image { get; set; }
+
+    [Parameter]
+    public EventCallback<SelectedImage> OnClear { get; set; }
+
+    async Task TriggerOnClear()
+    {
+        await OnClear.InvokeAsync(Image);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Image.ClassificationResult != null) return;
+
+        using (var fileStream = await Image.Upload(() => InvokeAsync(StateHasChanged)))
+        {
+            Image.ClassificationResult = ClassificationService.Classify(fileStream);
+        }
+    }
+}
